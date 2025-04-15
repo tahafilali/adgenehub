@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase-server';
-import { PLANS } from '@/lib/stripe';
+import { TIER_LIMITS } from '@/lib/subscription';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,68 +39,66 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (error) {
-      console.error('Exception checking users table:', error);
-    }
-    
-    // Check if user exists in database
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', userId)
-      .single();
-    
-    // If user doesn't exist, create one
-    if (userError && userError.code === 'PGRST116') { // No rows returned
-      console.log(`Creating missing user record for: ${userEmail}`);
-      
-      // Generate a timestamp for both created_at and updated_at
-      const timestamp = new Date().toISOString();
-      
-      // Insert user into database
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: userId,
-          email: userEmail,
-          full_name: authData.user.user_metadata.full_name,
-          subscription_tier: 'free',
-          credits_used: 0,
-          credits_limit: PLANS.FREE.credits,
-          created_at: timestamp,
-          updated_at: timestamp,
-        });
-      
-      if (insertError) {
-        console.error('Error creating user record:', insertError);
-        return NextResponse.json(
-          { error: 'Failed to create user record', details: insertError.message },
-          { status: 500 }
-        );
-      }
-      
-      return NextResponse.json({ 
-        status: 'created', 
-        userId,
-        message: 'User record successfully created'
-      });
-    } else if (userError) {
-      console.error('Error checking if user exists:', userError);
+      console.error('Error checking users table:', error);
       return NextResponse.json(
-        { error: 'Error checking user existence', details: userError.message },
+        { error: 'Error checking users table', details: error.message },
         { status: 500 }
       );
     }
     
-    return NextResponse.json({ 
-      status: 'exists', 
-      userId,
-      message: 'User record already exists'
+    // Fetch user data, including subscription_tier
+    let { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, subscription_tier')
+      .eq('id', userId)
+      .single();
+
+    if (userError) {
+      if (userError.code === 'PGRST116') {
+        // User doesn't exist, create a new user with the free tier
+        const timestamp = new Date().toISOString();
+        const { data, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: userId,
+            email: userEmail,
+            full_name: authData.user.user_metadata.full_name,
+            subscription_tier: 'free',
+            created_at: timestamp,
+            updated_at: timestamp,
+          })
+          .select('id, subscription_tier')
+          .single();
+
+        if (insertError) {
+          console.error('Error creating user:', insertError);
+          return NextResponse.json(
+            { error: 'Error creating user', details: insertError.message },
+            { status: 500 }
+          );
+        }
+
+        userData = data;
+        console.log(`Created user: ${userEmail} with tier: free`);
+      } else {
+        console.error('Error fetching user:', userError);
+        return NextResponse.json(
+          { error: 'Error fetching user', details: userError.message },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Return the subscription tier
+    return NextResponse.json({
+      userId: userData.id,
+      subscriptionTier: userData.subscription_tier,
     });
   } catch (error) {
-    console.error('Error ensuring user exists:', error);
+    console.error('Unexpected error:', error);
     return NextResponse.json(
-      { error: 'An unexpected error occurred' },
+      { error: 'An unexpected error occurred', details: error.message },
       { status: 500 }
     );
   }
-} 
+}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase-server';
 import { v4 as uuidv4 } from 'uuid';
-
+import { TIER_LIMITS } from '@/lib/subscription';
 /**
  * GET endpoint to fetch ads for a campaign
  */
@@ -70,6 +70,7 @@ export async function GET(
  */
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
+    console.log('Creating a new ad...');
     const campaignId = params.id;
     const supabase = createSupabaseAdmin();
     
@@ -97,6 +98,41 @@ export async function POST(request: Request, { params }: { params: { id: string 
         { status: 404 }
       );
     }
+
+    // Fetch user data including subscription tier
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('subscription_tier')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData) {
+      console.error('Error fetching user data:', userError);
+      return NextResponse.json({ error: 'Error fetching user data' }, { status: 500 });
+    }
+
+    const subscriptionTier = userData.subscription_tier;
+    console.log(`User ${user.id} has subscription tier: ${subscriptionTier}`);
+
+    // Check ad limits
+    const tierLimits = TIER_LIMITS[subscriptionTier];
+    if (!tierLimits) {
+      return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 500 });
+    }
+
+    // Get current ad count for the campaign
+    const { count: adCount, error: countError } = await supabase
+      .from('ads')
+      .select('*', { count: 'exact', head: true })
+      .eq('campaign_id', campaignId);
+
+    if (countError) {
+      console.error('Error fetching ad count:', countError);
+      return NextResponse.json({ error: 'Error fetching ad count' }, { status: 500 });
+    }
+
+    console.log(`Campaign ${campaignId} has ${adCount} ads, limit: ${tierLimits.adsPerCampaign}`);
+
     
     // Get the request body
     const body = await request.json();
@@ -124,6 +160,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
       }
     }
     
+    if (adCount >= tierLimits.adsPerCampaign) {
+      return NextResponse.json({
+        error: 'Ad limit reached',
+        message: `You have reached the maximum number of ads (${tierLimits.adsPerCampaign}) for this campaign in your current subscription tier.`,
+      }, { status: 403 });
+    }
+
     // Create the ad
     const { data: ad, error: createError } = await supabase
       .from('ads')
