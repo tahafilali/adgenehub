@@ -7,6 +7,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import { Lock, Search, Loader2 } from "lucide-react";
 
 interface Template {
@@ -26,6 +31,7 @@ export default function TemplatesPage() {
   const [allTemplates, setAllTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
   
   // Check user's subscription tier
   const isPro = user?.subscriptionTier === "pro";
@@ -69,6 +75,26 @@ export default function TemplatesPage() {
     
     fetchTemplates();
   }, [searchQuery]); // Only refetch when search query changes, not when tab changes
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      if (user) {
+        try {
+          const response = await fetch('/api/campaigns');
+          if (response.ok) {
+            const { campaigns } = await response.json();
+            setCampaigns(campaigns);
+          } else {
+            console.error('Failed to fetch campaigns');
+          }
+        } catch (error) {
+          console.error('Error fetching campaigns:', error);
+        }
+      }
+    };
+
+    fetchCampaigns();
+  }, [user]);
   
   // Filter templates based on search query and tab
   const filterTemplates = (templates: Template[], tier: string) => {
@@ -85,7 +111,7 @@ export default function TemplatesPage() {
     <p className="text-center py-8 text-muted-foreground">{message}</p>
   );
 
-  // Function to render template cards
+  // Function to render template cards  
   const renderTemplateCard = (template: Template, isLocked = false) => (
     <Card key={template.id} className={`p-4 relative border ${isLocked ? 'opacity-70' : ''}`}>
       {isLocked && (
@@ -102,7 +128,26 @@ export default function TemplatesPage() {
         <span className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded-full">
           {template.category}
         </span>
-        <Button size="sm" disabled={isLocked}>Use Template</Button>
+        <DropdownMenu >
+          <DropdownMenuContent>
+            {campaigns.length === 0 ? (
+              <DropdownMenuItem disabled>No campaigns available</DropdownMenuItem>
+            ) : (
+              campaigns.map((campaign: any) => (
+                <DropdownMenuItem key={campaign.id} asChild>
+                  <Link href={`/dashboard/campaigns/${campaign.id}/ads/create?template=${template.id}`}>
+                    {campaign.name}
+                  </Link>
+                </DropdownMenuItem>
+              ))
+            )}
+          </DropdownMenuContent>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" disabled={isLocked || campaigns.length === 0}>
+              Use Template
+            </Button>
+          </DropdownMenuTrigger>
+        </DropdownMenu>
       </div>
     </Card>
   );

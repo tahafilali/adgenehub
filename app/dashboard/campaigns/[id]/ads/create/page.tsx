@@ -2,7 +2,6 @@ import { Suspense } from 'react';
 import { createServerComponentClient } from '@/lib/supabase-server';
 import { CreateAdForm } from '@/components/ads/CreateAdForm';
 import { TemplateSelector } from '@/components/TemplateSelector';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
@@ -128,16 +127,30 @@ function ClientTemplateSelector({ campaignId }: { campaignId: string }) {
         }),
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to create ad');
+      const result = await response.json();
+
+      if (response.ok) {
+        // Fetch updated ad count
+        const adsResponse = await fetch(`/api/campaigns/${campaignId}/ads`);
+        const { ads } = await adsResponse.json();
+        
+        const adCount = ads.length;
+        const adsLimit = result.adsLimit;
+        
+        toast.success(`Ad created successfully! You now have ${adCount}/${adsLimit} ads.`);
+        
+        // Redirect to the edit page for the new ad
+        router.push(`/dashboard/campaigns/${campaignId}/ads/${result.ad.id}/edit`);
+      } else {
+        if (response.status === 403) {
+          // Ad limit reached
+          toast.error(`Ad limit reached. You have ${result.count}/${result.adsLimit} ads. Please upgrade your subscription.`);
+        } else {
+          // Other errors
+          toast.error(result.error || 'Failed to create ad. Please try again.');
+        }
       }
       
-      const { ad } = await response.json();
-      
-      toast.success('Ad created successfully!');
-      
-      // Redirect to the edit page for the new ad
-      router.push(`/dashboard/campaigns/${campaignId}/ads/${ad.id}`);
     } catch (error) {
       console.error('Error creating ad from template:', error);
       toast.error('Failed to create ad. Please try again.');

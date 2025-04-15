@@ -1,54 +1,64 @@
-import { useState, FormEvent, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+ import { useState, FormEvent, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Template } from '@/lib/types';
+import { useSearchParams } from 'next/navigation';
 
 interface CreateAdFormProps {
   campaignId: string;
-  templateId?: string;
+  templateId?: string | null;
   initialText?: string;
 }
 
-export function CreateAdForm({ campaignId, templateId, initialText = '' }: CreateAdFormProps) {
-  const router = useRouter();
+export function CreateAdForm({ campaignId, initialText = '' }: CreateAdFormProps) {
   const [adName, setAdName] = useState<string>('');
   const [adText, setAdText] = useState<string>(initialText);
+  const [adMedia, setAdMedia] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const searchParams = useSearchParams();
   
   // Fetch template details if templateId is provided
   useEffect(() => {
-    const fetchTemplate = async () => {
+    const fetchTemplate = async (templateId: string | null | undefined) => {
       if (!templateId) return;
       
       try {
-        const response = await fetch(`/api/templates/${templateId}`);
-        if (!response.ok) throw new Error('Failed to fetch template');
+        const templateResponse = await fetch(`/api/templates/${templateId}`, { next: { revalidate: 60 } });
+        if (!templateResponse.ok) throw new Error('Failed to fetch template');
         
-        const data = await response.json();
-        setSelectedTemplate(data.template);
+        const { template } = await templateResponse.json();
+        setSelectedTemplate(template);
         
         // Pre-populate form fields if not already set
-        if (!adText && data.template.preview_text) {
-          setAdText(data.template.preview_text);
+        if (template.preview_text) {
+          setAdText(template.preview_text);
         }
         
-        if (!adName && data.template.name) {
-          setAdName(`Ad based on ${data.template.name}`);
+        if (!adName && template.name) {
+          setAdName(`Ad based on ${template.name}`);
         }
       } catch (error) {
         console.error('Error fetching template:', error);
         toast.error('Failed to load template');
       }
     };
-    
-    fetchTemplate();
-  }, [templateId, adText, adName]);
-  
+
+    const templateId = searchParams?.get('template');
+    fetchTemplate(templateId);
+  }, [searchParams, templateId]);
+
+  const templateId = searchParams?.get('template');
+
+  useEffect(() => {
+    const templateId = searchParams?.get('template');
+    if (templateId) setAdName('Ad from template'); // Set ad name if templateId exists
+    console.log('templateId', templateId);
+  }, [templateId]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
@@ -60,29 +70,44 @@ export function CreateAdForm({ campaignId, templateId, initialText = '' }: Creat
     setIsSubmitting(true);
     
     try {
+      const formData = new FormData();
+      formData.append('name', adName || `New Ad ${new Date().toLocaleDateString()}`);
+      formData.append('ad_text', adText);
+      if (templateId) {
+        formData.append('template_id', templateId);
+      }
+      if (adMedia) {
+        formData.append('media', adMedia);
+      }
+
       // Create a new ad
       const response = await fetch(`/api/campaigns/${campaignId}/ads`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: adName || `New Ad ${new Date().toLocaleDateString()}`,
-          ad_text: adText,
-          template_id: templateId,
-        }),
+        body: formData,
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to create ad');
+      const result = await response.json();
+      
+      if (response.ok) {
+        // Fetch updated ad count
+        const adsResponse = await fetch(`/api/campaigns/${campaignId}/ads`);
+        const { ads } = await adsResponse.json();
+
+        const adCount = ads.length;
+        const adsLimit = result.adsLimit;
+
+        toast.success(`Ad created successfully! You now have ${adCount}/${adsLimit} ads.`);
+
+      } else {
+        if (response.status === 403) {
+          // Ad limit reached
+          toast.error(`Ad limit reached. You have ${result.count}/${result.adsLimit} ads. Please upgrade your subscription.`);
+        } else {
+          // Other errors
+          toast.error(result.error || 'Failed to create ad. Please try again.');
+        }
       }
-      
-      const { ad } = await response.json();
-      
-      toast.success('Ad created successfully!');
-      
-      // Redirect to the ad detail page
-      router.push(`/dashboard/campaigns/${campaignId}/ads/${ad.id}`);
+
     } catch (error) {
       console.error('Error creating ad:', error);
       toast.error('Failed to create ad. Please try again.');
@@ -128,6 +153,16 @@ export function CreateAdForm({ campaignId, templateId, initialText = '' }: Creat
           required
         />
       </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="ad-media">Upload Media (Image or Video)</Label>
+        <Input
+          type="file"
+          id="ad-media"
+          accept="image/*, video/*"
+          onChange={(e) => setAdMedia(e.target.files ? e.target.files[0] : null)}
+        />
+      </div>
       
       <div className="pt-4">
         <Button type="submit" disabled={isSubmitting} className="w-full">
@@ -136,4 +171,4 @@ export function CreateAdForm({ campaignId, templateId, initialText = '' }: Creat
       </div>
     </form>
   );
-} 
+}

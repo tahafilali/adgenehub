@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, ArrowLeft, CheckCircle, Edit, Loader2, RefreshCw, Trash2, Zap } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle, Edit, Loader2, RefreshCw, Trash2, Video, Image, Zap } from 'lucide-react';
 import { toast } from "sonner";
 import { DeleteAdModal } from '@/app/components/ads/DeleteAdModal';
+
 
 interface Campaign {
   id: string;
@@ -33,6 +34,7 @@ interface Ad {
   is_selected: boolean;
   created_at: string;
   updated_at: string;
+  file?: string | null; // Add file property
 }
 
 export default function CampaignDetailPage({ params }: { params: { id: string } }) {
@@ -48,7 +50,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
   const [adToDelete, setAdToDelete] = useState<{ id: string, content?: string } | null>(null);
 
   const fetchCampaignData = async () => {
-    try {
+      try {
       setLoading(true);
       const response = await fetch(`/api/campaigns/${params.id}`);
       if (!response.ok) {
@@ -306,6 +308,32 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                           <div className="text-lg font-serif p-4 border bg-muted/30 rounded-md">
                             {ad.content}
                           </div>
+                          {ad.file && (
+                            <div className="mt-4">
+                              {/* Basic file type detection based on extension (can be improved) */}
+                              {ad.file.toLowerCase().endsWith('.mp4') || ad.file.toLowerCase().endsWith('.mov') || ad.file.toLowerCase().endsWith('.avi') ? (
+                                <video
+                                  src={ad.file}
+                                  controls
+                                  className="rounded-md max-h-64 w-auto mx-auto"
+                                >
+                                  <source src={ad.file} type="video/mp4" />
+                                  {/* You can add more source elements for different video formats if needed */}
+                                  Your browser does not support the video tag.  
+                                </video>
+                              ) : (
+                                  <div className="flex justify-center">
+                                    <Image className="h-8 w-8 text-muted-foreground absolute" />
+                                    <img
+                                      src={ad.file}
+                                      alt="Ad Media"
+                                      className="rounded-md max-h-64 w-auto mx-auto"
+                                    />
+                                  </div>
+
+                              )}
+                            </div>
+                          )}
                         </CardContent>
                         <CardFooter className="flex justify-between">
                           <div className="flex gap-2">

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase-server';
 import { v4 as uuidv4 } from 'uuid';
 import { TIER_LIMITS } from '@/lib/subscription';
@@ -6,7 +6,7 @@ import { TIER_LIMITS } from '@/lib/subscription';
  * GET endpoint to fetch ads for a campaign
  */
 export async function GET(
-  req: NextRequest,
+  req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -133,7 +133,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     console.log(`Campaign ${campaignId} has ${adCount} ads, limit: ${tierLimits.adsPerCampaign}`);
 
-    
+
     // Get the request body
     const body = await request.json();
     
@@ -141,6 +141,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const templateId = body.template_id;
     let adText = body.ad_text || '';
     let adName = body.name || `New Ad ${new Date().toLocaleDateString()}`;
+    const file = body.file || null;
     
     // If a template ID is provided, fetch the template details
     if (templateId) {
@@ -181,7 +182,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
         clicks: 0,
         conversions: 0,
         is_selected: false,
-        template_id: templateId || null,
+          template_id: templateId || null,
+          file: file,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -195,10 +197,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
         { status: 500 }
       );
     }
-    
-    return NextResponse.json({ 
-      ad,
-      message: 'Ad created successfully' 
+    return NextResponse.json({
+      message: 'Ad created successfully',
+      count: adCount + 1,
+      adsLimit: tierLimits.adsPerCampaign,
+      ad
     }, { status: 201 });
   } catch (error) {
     console.error('Unexpected error creating ad:', error);
