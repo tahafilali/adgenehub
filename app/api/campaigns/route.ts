@@ -95,13 +95,13 @@ export async function POST(req: NextRequest) {
 
     // Fetch user data including subscription tier
     const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('subscription_tier')
-      .eq('id', userId)
-      .single();
+    .from('users')
+    .select('subscription_tier')
+    .eq('id', userId)
+    .single();
 
-    if (userError || !userData) {
-      console.error('Error fetching user data:', userError);
+    if (userDataError || !userData) {
+      console.error('Error fetching user data:', userDataError);
       return NextResponse.json({ error: 'Error fetching user data' }, { status: 500 });
     }
 
