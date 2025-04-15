@@ -11,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Lock, Search, Loader2 } from "lucide-react";
 
@@ -128,12 +129,19 @@ export default function TemplatesPage() {
         <span className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded-full">
           {template.category}
         </span>
-        <DropdownMenu >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" disabled={isLocked || campaigns.length === 0}>
+              Use Template
+            </Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent>
             {campaigns.length === 0 ? (
-              <DropdownMenuItem disabled>No campaigns available</DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                No campaigns available
+              </DropdownMenuItem>
             ) : (
-              campaigns.map((campaign: any) => (
+              campaigns.map((campaign) => (
                 <DropdownMenuItem key={campaign.id} asChild>
                   <Link href={`/dashboard/campaigns/${campaign.id}/ads/create?template=${template.id}`}>
                     {campaign.name}
@@ -142,11 +150,6 @@ export default function TemplatesPage() {
               ))
             )}
           </DropdownMenuContent>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" disabled={isLocked || campaigns.length === 0}>
-              Use Template
-            </Button>
-          </DropdownMenuTrigger>
         </DropdownMenu>
       </div>
     </Card>

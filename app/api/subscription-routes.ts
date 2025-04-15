@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
           let endDate = null;
           if (subscription.trial_end) {
             endDate = new Date(subscription.trial_end * 1000).toISOString();
-          } else if (subscription.current_period_end) {
-            endDate = new Date(subscription.current_period_end * 1000).toISOString();
+          } else if ('current_period_end' in subscription && subscription.current_period_end) {
+            endDate = new Date((subscription as any).current_period_end * 1000).toISOString();
           }
           
           // Update the user in the database
@@ -141,10 +141,10 @@ export async function POST(request: NextRequest) {
       }
       
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string };
         
         // Check if there is a subscription ID in the invoice
-        if (typeof invoice.subscription === 'string') {
+        if (invoice.subscription) {
           const subscriptionId = invoice.subscription;
           
           // Get the subscription

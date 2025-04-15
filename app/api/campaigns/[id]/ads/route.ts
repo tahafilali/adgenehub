@@ -111,11 +111,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Error fetching user data' }, { status: 500 });
     }
 
-    const subscriptionTier = userData.subscription_tier;
+    const subscriptionTier = userData.subscription_tier || 'free';
     console.log(`User ${user.id} has subscription tier: ${subscriptionTier}`);
 
     // Check ad limits
-    const tierLimits = TIER_LIMITS[subscriptionTier];
+    const tierLimits = TIER_LIMITS[subscriptionTier as keyof typeof TIER_LIMITS];
     if (!tierLimits) {
       return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 500 });
     }
@@ -161,7 +161,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       }
     }
     
-    if (adCount >= tierLimits.adsPerCampaign) {
+    if (adCount !== null && adCount >= tierLimits.adsPerCampaign) {
       return NextResponse.json({
         error: 'Ad limit reached',
         message: `You have reached the maximum number of ads (${tierLimits.adsPerCampaign}) for this campaign in your current subscription tier.`,
@@ -199,7 +199,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
     return NextResponse.json({
       message: 'Ad created successfully',
-      count: adCount + 1,
+      count: adCount !== null ? adCount + 1 : 1,
       adsLimit: tierLimits.adsPerCampaign,
       ad
     }, { status: 201 });

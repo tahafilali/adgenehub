@@ -48,15 +48,31 @@ export async function POST() {
           
           // Try direct query if RPC fails
           console.log('Trying direct query execution...');
-          const { error: directError } = await supabase.query(statement);
-          
-          if (!directError) {
-            // If direct query succeeds, count it as a success
-            console.log(`Statement ${i + 1} executed successfully via direct query`);
-            successCount++;
-            errors.pop(); // Remove the error we just added
-          } else {
-            console.error(`Direct query also failed:`, directError);
+          try {
+            const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+            const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${serviceRoleKey}`,
+                'apikey': serviceRoleKey,
+                'Prefer': 'params=single-object',
+              },
+              body: JSON.stringify({
+                query: statement,
+              }),
+            });
+            
+            if (response.ok) {
+              console.log(`Statement ${i + 1} executed successfully via direct query`);
+              successCount++;
+              errors.pop(); // Remove the error we just added
+            } else {
+              const errorText = await response.text();
+              console.error(`Direct query also failed: ${errorText}`);
+            }
+          } catch (directError) {
+            console.error(`Direct query execution failed:`, directError);
           }
         } else {
           console.log(`Statement ${i + 1} executed successfully`);

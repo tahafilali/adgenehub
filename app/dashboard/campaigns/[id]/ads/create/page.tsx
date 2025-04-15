@@ -1,7 +1,5 @@
 import { Suspense } from 'react';
-import { createServerComponentClient } from '@/lib/supabase-server';
-import { CreateAdForm } from '@/components/ads/CreateAdForm';
-import { TemplateSelector } from '@/components/TemplateSelector';
+import { createSupabaseServer } from '@/lib/supabase-server';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
@@ -17,7 +15,7 @@ interface AdCreatePageProps {
 }
 
 export default async function AdCreatePage({ params }: AdCreatePageProps) {
-  const supabase = createServerComponentClient();
+  const supabase = createSupabaseServer();
   
   // Fetch campaign data to verify it exists and to get its name
   const { data: campaign, error } = await supabase
@@ -83,7 +81,7 @@ export default async function AdCreatePage({ params }: AdCreatePageProps) {
             </p>
             
             <Suspense fallback={<div>Loading form...</div>}>
-              <CreateAdForm campaignId={params.id} />
+              <ClientAdForm campaignId={params.id} />
             </Suspense>
           </div>
         </TabsContent>
@@ -161,8 +159,7 @@ function ClientTemplateSelector({ campaignId }: { campaignId: string }) {
   
   return (
     <div className="space-y-6">
-      <TemplateSelector onSelectTemplate={handleTemplateSelect} />
-      
+      {/* We'll implement the actual template selector here */}
       {selectedTemplate && (
         <div className="mt-8 p-4 border rounded-lg bg-gray-50">
           <h3 className="font-medium text-lg mb-2">Selected Template: {selectedTemplate.name}</h3>
@@ -182,6 +179,43 @@ function ClientTemplateSelector({ campaignId }: { campaignId: string }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Client form component
+'use client';
+
+function ClientAdForm({ campaignId }: { campaignId: string }) {
+  return (
+    <div>
+      {/* Custom form implementation */}
+      <form className="space-y-6">
+        <div className="space-y-2">
+          <label htmlFor="ad-name" className="text-sm font-medium">Ad Name</label>
+          <input
+            id="ad-name"
+            className="w-full px-3 py-2 border rounded-md"
+            placeholder="Enter a name for your ad"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label htmlFor="ad-text" className="text-sm font-medium">Ad Text</label>
+          <textarea
+            id="ad-text"
+            className="w-full px-3 py-2 border rounded-md resize-y"
+            rows={6}
+            placeholder="Enter your ad text here..."
+          ></textarea>
+        </div>
+        
+        <div className="pt-4">
+          <Button type="submit" className="w-full">
+            Create Ad
+          </Button>
+        </div>
+      </form>
     </div>
   );
 } 

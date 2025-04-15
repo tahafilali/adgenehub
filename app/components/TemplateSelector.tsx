@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -68,7 +68,7 @@ export function TemplateSelector({ onSelectTemplate, userTier = 'basic' }: Templ
         // Extract unique categories for the filter
         const uniqueCategories = Array.from(
           new Set(data.templates.map((t: Template) => t.category))
-        ).filter(Boolean);
+        ).filter(Boolean) as string[];
         
         setCategories(uniqueCategories);
         setError(null);

@@ -21,8 +21,8 @@ export function AuthGuard({ children, requireAuth = true }: AuthGuardProps) {
   
   useEffect(() => {
     // Handle error parameters from OAuth redirects
-    const error = searchParams.get('error');
-    const errorDescription = searchParams.get('error_description');
+    const error = searchParams?.get('error');
+    const errorDescription = searchParams?.get('error_description');
     
     if (error) {
       console.error(`Auth error: ${error}${errorDescription ? ` - ${errorDescription}` : ''}`);
@@ -40,7 +40,7 @@ export function AuthGuard({ children, requireAuth = true }: AuthGuardProps) {
       }
       
       // Handle OAuth code parameter - we need to refresh user data
-      const code = searchParams.get('code');
+      const code = searchParams?.get('code');
       if (code) {
         console.log("AuthGuard: Detected OAuth code parameter, will refresh user data");
       }
@@ -71,12 +71,12 @@ export function AuthGuard({ children, requireAuth = true }: AuthGuardProps) {
     }
 
     // Check if path is public
-    const isPublicPath = PUBLIC_PATHS.includes(pathname);
+    const isPublicPath = pathname ? PUBLIC_PATHS.includes(pathname) : false;
     
     // If auth is required and user is not logged in, redirect to login
     if (requireAuth && !user && !isPublicPath) {
       console.log("AuthGuard: Redirecting to login, auth required but no user");
-      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+      router.push(`/login?redirect=${encodeURIComponent(pathname || '/')}`);
       return;
     }
     
@@ -85,7 +85,7 @@ export function AuthGuard({ children, requireAuth = true }: AuthGuardProps) {
       console.log("AuthGuard: Redirecting to dashboard, user is logged in");
       
       // Check if there's a redirect param
-      const redirectParam = searchParams.get('redirect');
+      const redirectParam = searchParams?.get('redirect');
       if (redirectParam) {
         router.push(redirectParam);
       } else {

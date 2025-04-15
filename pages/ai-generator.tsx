@@ -19,9 +19,8 @@ const AiGeneratorPage = () => {
     return <div>Loading...</div>;
   }
 
-  // Check if the user has a profile and is on the pro plan
-  // Note: Ensure your AuthContext loads the user profile including 'active_plan'
-  const isPro = user?.profile?.active_plan === 'pro';
+  // Check if the user has a pro subscription
+  const isPro = user?.subscription_tier === 'pro';
 
   if (!isPro) {
     return (

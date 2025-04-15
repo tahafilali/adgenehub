@@ -1,4 +1,4 @@
- import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,14 +47,15 @@ export function CreateAdForm({ campaignId, initialText = '' }: CreateAdFormProps
       }
     };
 
-    const templateId = searchParams?.get('template');
-    fetchTemplate(templateId);
-  }, [searchParams, templateId]);
+    // Get templateId from searchParams
+    const templateIdFromParams = searchParams?.get('template');
+    fetchTemplate(templateIdFromParams);
+  }, [searchParams]);
 
+  // Get templateId from searchParams for other uses
   const templateId = searchParams?.get('template');
 
   useEffect(() => {
-    const templateId = searchParams?.get('template');
     if (templateId) setAdName('Ad from template'); // Set ad name if templateId exists
     console.log('templateId', templateId);
   }, [templateId]);

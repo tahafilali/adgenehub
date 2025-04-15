@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('Error checking users table:', error);
       return NextResponse.json(
-        { error: 'Error checking users table', details: error.message },
+        { error: 'Error checking users table', details: error instanceof Error ? error.message : String(error) },
         { status: 500 }
       );
     }
@@ -91,13 +91,13 @@ export async function POST(request: NextRequest) {
 
     // Return the subscription tier
     return NextResponse.json({
-      userId: userData.id,
-      subscriptionTier: userData.subscription_tier,
+      userId: userData?.id,
+      subscriptionTier: userData?.subscription_tier || 'free',
     });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
-      { error: 'An unexpected error occurred', details: error.message },
+      { error: 'An unexpected error occurred', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

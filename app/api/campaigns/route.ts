@@ -83,7 +83,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Authorization header missing' }, { status: 401 });
     }
     const token = authHeader.split(' ')[1];
-    supabase.auth.setAuth(token);
+    
+    // Set the auth token correctly
+    supabase.auth.setSession({
+      access_token: token,
+      refresh_token: ''
+    });
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -94,7 +99,7 @@ export async function POST(req: NextRequest) {
     const userId = user.id;
 
     // Fetch user data including subscription tier
-    const { data: userData, error: userError } = await supabase
+    const { data: userData, error: userDataError } = await supabase
     .from('users')
     .select('subscription_tier')
     .eq('id', userId)
@@ -105,11 +110,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Error fetching user data' }, { status: 500 });
     }
 
-    const subscriptionTier = userData.subscription_tier;
+    const subscriptionTier = userData.subscription_tier || 'free';
     console.log(`User ${userId} has subscription tier: ${subscriptionTier}`);
 
     // 2. Check campaign limits
-    const tierLimits = TIER_LIMITS[subscriptionTier];
+    const tierLimits = TIER_LIMITS[subscriptionTier as keyof typeof TIER_LIMITS];
     if (!tierLimits) {
       return NextResponse.json({ error: 'Invalid subscription tier' }, { status: 500 });
     }

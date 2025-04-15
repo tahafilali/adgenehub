@@ -40,7 +40,9 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
               {user.fullName || user.email}
             </span>
             <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-              {user.subscriptionTier?.charAt(0).toUpperCase() + user.subscriptionTier?.slice(1) || "Free"} Plan
+              {(user.subscriptionTier 
+                ? user.subscriptionTier.charAt(0).toUpperCase() + user.subscriptionTier.slice(1) 
+                : "Free")} Plan
             </span>
           </div>
           <ChevronDown className="h-4 w-4 text-muted-foreground" />

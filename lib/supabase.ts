@@ -27,15 +27,9 @@ export const createSupabaseServer = () => {
     throw new Error('Missing Supabase environment variables');
   }
   
-  const cookieStore = cookies();
-  
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
-      },
-    },
-  });
+  // For server components, we'll use basic client without cookie handling
+  // This might require updating session in API routes separately
+  return createClient(supabaseUrl, supabaseAnonKey);
 };
 
 // For client components

@@ -32,8 +32,43 @@ export async function POST() {
       GRANT EXECUTE ON FUNCTION exec_sql TO service_role;
     `;
     
-    // Execute the SQL directly
-    const { error } = await supabase.query(createFunctionSql);
+    // Split SQL into individual statements
+    const sqlStatements = createFunctionSql
+      .split(';')
+      .map(stmt => stmt.trim())
+      .filter(stmt => stmt.length > 0)
+      .map(stmt => `${stmt};`);
+    
+    let error = null;
+    
+    // Execute each statement directly using the REST API
+    for (const statement of sqlStatements) {
+      try {
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceRoleKey}`,
+            'apikey': serviceRoleKey,
+            'Prefer': 'params=single-object',
+          },
+          body: JSON.stringify({
+            query: statement,
+          }),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Error executing statement: ${errorText}`);
+          error = new Error(errorText);
+          break;
+        }
+      } catch (err) {
+        error = err instanceof Error ? err : new Error(String(err));
+        break;
+      }
+    }
     
     if (error) {
       console.error('Error creating exec_sql function:', error);
